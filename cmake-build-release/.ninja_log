@@ -3,7 +3,7 @@
 65	699	7194946622685585	CMakeFiles/LuaSoLoudBinding.dir/soloud/backend/jack/soloud_jack.cpp.obj	d823ef438a95497a
 2	2425	7194972702548365	CMakeFiles/LuaSoLoudBinding.dir/main.cpp.obj	70031f53f1a423b5
 0	8	0	clean	54a06fd83fad62cf
-0	63	7194972832069224	build.ninja	7a659e6cc9afd9d3
+1	78	7194982131142141	build.ninja	7a659e6cc9afd9d3
 34	722	7194946622896438	CMakeFiles/LuaSoLoudBinding.dir/soloud/audiosource/vic/soloud_vic.cpp.obj	cc33710e35299925
 25	213	7194946617838954	CMakeFiles/LuaSoLoudBinding.dir/soloud/audiosource/speech/resonator.cpp.obj	d1a14c0cc9cc305c
 31	405	7194946619552637	CMakeFiles/LuaSoLoudBinding.dir/soloud/audiosource/tedsid/sid.cpp.obj	719022f62020dd8e
@@ -72,8 +72,8 @@
 571	1184	7194947098116474	CMakeFiles/LuaSoLoudBinding.dir/soloud/core/soloud_thread.cpp.obj	6f87bc58058c3638
 576	1282	7194947099081761	CMakeFiles/LuaSoLoudBinding.dir/soloud/filter/soloud_fftfilter.cpp.obj	192c3826501b342
 61	1344	7194947099687863	CMakeFiles/LuaSoLoudBinding.dir/soloud/core/soloud.cpp.obj	bc84f2b7fbae5218
-2	121	7194961113119249	LuaSoLoudBinding.dll	acf8bc79aff03467
-2	121	7194961113119249	LuaSoLoudBinding.lib	acf8bc79aff03467
-1	78	7194972832069224	build.ninja	7a659e6cc9afd9d3
 2	158	7194972702548365	LuaSoLoudBinding.dll	64f3d1d02b81707d
 2	158	7194972702548365	LuaSoLoudBinding.lib	64f3d1d02b81707d
+1	2018	7194983054577771	CMakeFiles/LuaSoLoudBinding.dir/main.cpp.obj	70031f53f1a423b5
+2018	2157	7194983054577771	LuaSoLoudBinding.dll	64f3d1d02b81707d
+2018	2157	7194983054577771	LuaSoLoudBinding.lib	64f3d1d02b81707d

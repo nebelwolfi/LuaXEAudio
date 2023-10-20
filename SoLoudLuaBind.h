@@ -352,6 +352,13 @@ int luaopen_AudioLib(lua_State *L) {
         return 1;
     });
 
+    lua_newuserdata(L, 0);
+    lua_newtable(L);
+    lua_pushcclosure(L, luaclose_AudioLib, 0);
+    lua_setfield(L, -2, "__gc");
+    lua_setmetatable(L, -2);
+    luaL_ref(L, LUA_REGISTRYINDEX);
+
     lua_newtable(L);
     lua_setfield(L, -2, "SFXR");
 
