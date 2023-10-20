@@ -1,0 +1,3 @@
+LIBRARY   LuaSoLoudBinding
+EXPORTS
+   luaopen_audio   @1
