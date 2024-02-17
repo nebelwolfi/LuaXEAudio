@@ -12,13 +12,13 @@
 SoLoud::Soloud* soloud;
 LuaBinding::ObjectRef soloud_ref = LuaBinding::NilRef;
 std::string AudioBasePath;
-int lua_Audio_Init(lua_State *L) {
-    if (!soloud) {
-        soloud = new SoLoud::Soloud();
-        soloud->init(SoLoud::Soloud::CLIP_ROUNDOFF, SoLoud::Soloud::AUTO, SoLoud::Soloud::AUTO, SoLoud::Soloud::AUTO, 8);
+int lua_Audio_SetBasePath(lua_State *L) {
+    if (lua_gettop(L) < 1)
+    {
+        lua_pushstring(L, AudioBasePath.c_str());
+        return 1;
     }
-    LuaBinding::State S(L);
-    AudioBasePath = S.at(1).as<std::string>();
+    AudioBasePath = luaL_checkstring(L, 1);
     return 0;
 }
 int lua_Audio_Shutdown(lua_State *L) {
@@ -78,15 +78,15 @@ int lua_Audio_Mod(lua_State *L) {
 }
 
 luaL_Reg AudioLib [] = {
-        { "Init", lua_Audio_Init },
-        { "Shutdown", lua_Audio_Shutdown },
-        { "Play", lua_Audio_Play },
-        { "File", lua_Audio_File },
-        { "FileStream", lua_Audio_FileStream },
-        { "Speech", lua_Audio_Speech },
-        { "Vizsn", lua_Audio_Vizsn },
-        { "Sfxr", lua_Audio_Sfxr },
-        { "Mod", lua_Audio_Mod },
+        { "base_path", lua_Audio_SetBasePath },
+        { "shutdown", lua_Audio_Shutdown },
+        { "play", lua_Audio_Play },
+        { "file", lua_Audio_File },
+        { "file_stream", lua_Audio_FileStream },
+        { "speech", lua_Audio_Speech },
+        { "vizsn", lua_Audio_Vizsn },
+        { "sfxr", lua_Audio_Sfxr },
+        { "mod", lua_Audio_Mod },
         { NULL, NULL }
 };
 
@@ -99,6 +99,11 @@ int luaclose_AudioLib(lua_State *L) {
 }
 
 int luaopen_AudioLib(lua_State *L) {
+    if (!soloud) {
+        soloud = new SoLoud::Soloud();
+        soloud->init(SoLoud::Soloud::CLIP_ROUNDOFF, SoLoud::Soloud::AUTO, SoLoud::Soloud::AUTO, SoLoud::Soloud::AUTO, 8);
+    }
+
     auto S = LuaBinding::State(L);
     if (soloud_ref.valid())
         return soloud_ref.push();
@@ -106,247 +111,247 @@ int luaopen_AudioLib(lua_State *L) {
     luaL_newlib(L, AudioLib);
 
     auto Audio = S[-1];
-    Audio.fun("PlaySource", [](SoLoud::AudioSource* source) {
+    Audio.fun("play_source", [](SoLoud::AudioSource* source) {
         return soloud->play(*source);
     });
-    Audio.fun("PlayClocked", [](double aSoundTime, SoLoud::AudioSource* source) {
+    Audio.fun("play_clocked", [](double aSoundTime, SoLoud::AudioSource* source) {
         return soloud->playClocked(aSoundTime, *source);
     });
-    Audio.fun("Play3d", [](SoLoud::AudioSource* source, float x, float y, float z) {
+    Audio.fun("play3d", [](SoLoud::AudioSource* source, float x, float y, float z) {
         return soloud->play3d(*source, x, y, z);
     });
-    Audio.fun("Play3dClocked", [](double aSoundTime, SoLoud::AudioSource* source, float x, float y, float z) {
+    Audio.fun("play3d_clocked", [](double aSoundTime, SoLoud::AudioSource* source, float x, float y, float z) {
         return soloud->play3dClocked(aSoundTime, *source, x, y, z);
     });
-    Audio.fun("PlayBackground", [](SoLoud::AudioSource* source) {
+    Audio.fun("play_background", [](SoLoud::AudioSource* source) {
         return soloud->playBackground(*source);
     });
-    Audio.fun("Seek", [](unsigned int voiceHandle, double aSeconds) {
+    Audio.fun("seek", [](unsigned int voiceHandle, double aSeconds) {
         return soloud->seek(voiceHandle, aSeconds);
     });
-    Audio.fun("Stop", [](unsigned int voiceHandle) {
+    Audio.fun("stop", [](unsigned int voiceHandle) {
         return soloud->stop(voiceHandle);
     });
-    Audio.fun("StopAll", []() {
+    Audio.fun("stop_all", []() {
         return soloud->stopAll();
     });
-    Audio.fun("StopAudioSource", [](SoLoud::AudioSource* source) {
+    Audio.fun("stop_audio_source", [](SoLoud::AudioSource* source) {
         return soloud->stopAudioSource(*source);
     });
-    Audio.fun("CountAudioSource", [](SoLoud::AudioSource* source) {
+    Audio.fun("count_audio_source", [](SoLoud::AudioSource* source) {
         return soloud->countAudioSource(*source);
     });
-    Audio.fun("SetFilterParameter", [](unsigned int voiceHandle, unsigned int filterId, unsigned int attributeId, float value) {
+    Audio.fun("set_filter_parameter", [](unsigned int voiceHandle, unsigned int filterId, unsigned int attributeId, float value) {
         return soloud->setFilterParameter(voiceHandle, filterId, attributeId, value);
     });
-    Audio.fun("GetFilterParameter", [](unsigned int voiceHandle, unsigned int filterId, unsigned int attributeId) {
+    Audio.fun("get_filter_parameter", [](unsigned int voiceHandle, unsigned int filterId, unsigned int attributeId) {
         return soloud->getFilterParameter(voiceHandle, filterId, attributeId);
     });
-    Audio.fun("FadeFilterParameter", [](unsigned int voiceHandle, unsigned int filterId, unsigned int attributeId, float to, double aTime) {
+    Audio.fun("fade_filter_parameter", [](unsigned int voiceHandle, unsigned int filterId, unsigned int attributeId, float to, double aTime) {
         return soloud->fadeFilterParameter(voiceHandle, filterId, attributeId, to, aTime);
     });
-    Audio.fun("OscillateFilterParameter", [](unsigned int voiceHandle, unsigned int filterId, unsigned int attributeId, float from, float to, double aTime) {
+    Audio.fun("oscillate_filter_parameter", [](unsigned int voiceHandle, unsigned int filterId, unsigned int attributeId, float from, float to, double aTime) {
         return soloud->oscillateFilterParameter(voiceHandle, filterId, attributeId, from, to, aTime);
     });
-    Audio.fun("GetStreamTime", [](unsigned int voiceHandle) {
+    Audio.fun("get_stream_time", [](unsigned int voiceHandle) {
         return soloud->getStreamTime(voiceHandle);
     });
-    Audio.fun("GetPause", [](unsigned int voiceHandle) {
+    Audio.fun("get_pause", [](unsigned int voiceHandle) {
         return soloud->getPause(voiceHandle);
     });
-    Audio.fun("GetVolume", [](unsigned int voiceHandle) {
+    Audio.fun("get_volume", [](unsigned int voiceHandle) {
         return soloud->getVolume(voiceHandle);
     });
-    Audio.fun("GetOverallVolume", [](unsigned int voiceHandle) {
+    Audio.fun("get_overall_volume", [](unsigned int voiceHandle) {
         return soloud->getOverallVolume(voiceHandle);
     });
-    Audio.fun("GetPan", [](unsigned int voiceHandle) {
+    Audio.fun("get_pan", [](unsigned int voiceHandle) {
         return soloud->getPan(voiceHandle);
     });
-    Audio.fun("GetSamplerate", [](unsigned int voiceHandle) {
+    Audio.fun("get_samplerate", [](unsigned int voiceHandle) {
         return soloud->getSamplerate(voiceHandle);
     });
-    Audio.fun("GetProtectVoice", [](unsigned int voiceHandle) {
+    Audio.fun("get_protect_voice", [](unsigned int voiceHandle) {
         return soloud->getProtectVoice(voiceHandle);
     });
-    Audio.fun("GetActiveVoiceCount", []() {
+    Audio.fun("get_active_voice_count", []() {
         return soloud->getActiveVoiceCount();
     });
-    Audio.fun("GetVoiceCount", []() {
+    Audio.fun("get_voice_count", []() {
         return soloud->getVoiceCount();
     });
-    Audio.fun("IsValidVoiceHandle", [](unsigned int voiceHandle) {
+    Audio.fun("is_valid_voice_handle", [](unsigned int voiceHandle) {
         return soloud->isValidVoiceHandle(voiceHandle);
     });
-    Audio.fun("GetRelativePlaySpeed", [](unsigned int voiceHandle) {
+    Audio.fun("get_relative_play_speed", [](unsigned int voiceHandle) {
         return soloud->getRelativePlaySpeed(voiceHandle);
     });
-    Audio.fun("GetPostClipScaler", []() {
+    Audio.fun("get_post_clip_scaler", []() {
         return soloud->getPostClipScaler();
     });
-    Audio.fun("GetGlobalVolume", []() {
+    Audio.fun("get_global_volume", []() {
         return soloud->getGlobalVolume();
     });
-    Audio.fun("GetMaxActiveVoiceCount", []() {
+    Audio.fun("get_max_active_voice_count", []() {
         return soloud->getMaxActiveVoiceCount();
     });
-    Audio.fun("GetLooping", [](unsigned int voiceHandle) {
+    Audio.fun("get_looping", [](unsigned int voiceHandle) {
         return soloud->getLooping(voiceHandle);
     });
-    Audio.fun("GetLoopPoint", [](unsigned int voiceHandle) {
+    Audio.fun("get_loop_point", [](unsigned int voiceHandle) {
         return soloud->getLoopPoint(voiceHandle);
     });
-    Audio.fun("SetLoopPoint", [](unsigned int voiceHandle, double aLoopPoint) {
+    Audio.fun("set_loop_point", [](unsigned int voiceHandle, double aLoopPoint) {
         return soloud->setLoopPoint(voiceHandle, aLoopPoint);
     });
-    Audio.fun("SetLooping", [](unsigned int voiceHandle, bool aLooping) {
+    Audio.fun("set_looping", [](unsigned int voiceHandle, bool aLooping) {
         return soloud->setLooping(voiceHandle, aLooping);
     });
-    Audio.fun("SetMaxActiveVoiceCount", [](unsigned int aVoiceCount) {
+    Audio.fun("set_max_active_voice_count", [](unsigned int aVoiceCount) {
         return soloud->setMaxActiveVoiceCount(aVoiceCount);
     });
-    Audio.fun("SetInaudibleBehavior", [](unsigned int voiceHandle, bool aMustTick, bool aKill) {
+    Audio.fun("set_inaudible_behavior", [](unsigned int voiceHandle, bool aMustTick, bool aKill) {
         return soloud->setInaudibleBehavior(voiceHandle, aMustTick, aKill);
     });
-    Audio.fun("SetGlobalVolume", [](float aVolume) {
+    Audio.fun("set_global_volume", [](float aVolume) {
         return soloud->setGlobalVolume(aVolume);
     });
-    Audio.fun("SetPostClipScaler", [](float aScaler) {
+    Audio.fun("set_post_clip_scaler", [](float aScaler) {
         return soloud->setPostClipScaler(aScaler);
     });
-    Audio.fun("SetPause", [](unsigned int voiceHandle, bool aPause) {
+    Audio.fun("set_pause", [](unsigned int voiceHandle, bool aPause) {
         return soloud->setPause(voiceHandle, aPause);
     });
-    Audio.fun("SetPauseAll", [](bool aPause) {
+    Audio.fun("set_pause_all", [](bool aPause) {
         return soloud->setPauseAll(aPause);
     });
-    Audio.fun("SetRelativePlaySpeed", [](unsigned int voiceHandle, float aSpeed) {
+    Audio.fun("set_relative_play_speed", [](unsigned int voiceHandle, float aSpeed) {
         return soloud->setRelativePlaySpeed(voiceHandle, aSpeed);
     });
-    Audio.fun("SetProtectVoice", [](unsigned int voiceHandle, bool aProtect) {
+    Audio.fun("set_protect_voice", [](unsigned int voiceHandle, bool aProtect) {
         return soloud->setProtectVoice(voiceHandle, aProtect);
     });
-    Audio.fun("SetSamplerate", [](unsigned int voiceHandle, float aSamplerate) {
+    Audio.fun("set_samplerate", [](unsigned int voiceHandle, float aSamplerate) {
         return soloud->setSamplerate(voiceHandle, aSamplerate);
     });
-    Audio.fun("SetPan", [](unsigned int voiceHandle, float aPan) {
+    Audio.fun("set_pan", [](unsigned int voiceHandle, float aPan) {
         return soloud->setPan(voiceHandle, aPan);
     });
-    Audio.fun("SetPanAbsolute", [](unsigned int voiceHandle, float aLVolume, float aRVolume, float aLBVolume, float aRBVolume, float aCVolume, float aSVolume) {
+    Audio.fun("set_pan_absolute", [](unsigned int voiceHandle, float aLVolume, float aRVolume, float aLBVolume, float aRBVolume, float aCVolume, float aSVolume) {
         return soloud->setPanAbsolute(voiceHandle, aLVolume, aRVolume, aLBVolume, aRBVolume, aCVolume, aSVolume);
     });
-    Audio.fun("SetVolume", [](unsigned int voiceHandle, float aVolume) {
+    Audio.fun("set_volume", [](unsigned int voiceHandle, float aVolume) {
         return soloud->setVolume(voiceHandle, aVolume);
     });
-    Audio.fun("SetDelaySamples", [](unsigned int voiceHandle, unsigned int aSamples) {
+    Audio.fun("set_delay_samples", [](unsigned int voiceHandle, unsigned int aSamples) {
         return soloud->setDelaySamples(voiceHandle, aSamples);
     });
-    Audio.fun("FadeVolume", [](unsigned int voiceHandle, float aTo, double aTime) {
+    Audio.fun("fade_volume", [](unsigned int voiceHandle, float aTo, double aTime) {
         return soloud->fadeVolume(voiceHandle, aTo, aTime);
     });
-    Audio.fun("FadePan", [](unsigned int voiceHandle, float aTo, double aTime) {
+    Audio.fun("fade_pan", [](unsigned int voiceHandle, float aTo, double aTime) {
         return soloud->fadePan(voiceHandle, aTo, aTime);
     });
-    Audio.fun("FadeRelativePlaySpeed", [](unsigned int voiceHandle, float aTo, double aTime) {
+    Audio.fun("fade_relative_play_speed", [](unsigned int voiceHandle, float aTo, double aTime) {
         return soloud->fadeRelativePlaySpeed(voiceHandle, aTo, aTime);
     });
-    Audio.fun("FadeGlobalVolume", [](float aTo, double aTime) {
+    Audio.fun("fade_global_volume", [](float aTo, double aTime) {
         return soloud->fadeGlobalVolume(aTo, aTime);
     });
-    Audio.fun("SchedulePause", [](unsigned int voiceHandle, double aTime) {
+    Audio.fun("schedule_pause", [](unsigned int voiceHandle, double aTime) {
         return soloud->schedulePause(voiceHandle, aTime);
     });
-    Audio.fun("ScheduleStop", [](unsigned int voiceHandle, double aTime) {
+    Audio.fun("schedule_stop", [](unsigned int voiceHandle, double aTime) {
         return soloud->scheduleStop(voiceHandle, aTime);
     });
-    Audio.fun("OscillateVolume", [](unsigned int voiceHandle, float aFrom, float aTo, double aTime) {
+    Audio.fun("oscillate_volume", [](unsigned int voiceHandle, float aFrom, float aTo, double aTime) {
         return soloud->oscillateVolume(voiceHandle, aFrom, aTo, aTime);
     });
-    Audio.fun("OscillatePan", [](unsigned int voiceHandle, float aFrom, float aTo, double aTime) {
+    Audio.fun("oscillate_pan", [](unsigned int voiceHandle, float aFrom, float aTo, double aTime) {
         return soloud->oscillatePan(voiceHandle, aFrom, aTo, aTime);
     });
-    Audio.fun("OscillateRelativePlaySpeed", [](unsigned int voiceHandle, float aFrom, float aTo, double aTime) {
+    Audio.fun("oscillate_relative_play_speed", [](unsigned int voiceHandle, float aFrom, float aTo, double aTime) {
         return soloud->oscillateRelativePlaySpeed(voiceHandle, aFrom, aTo, aTime);
     });
-    Audio.fun("SetGlobalFilter", [](unsigned int filterId, SoLoud::Filter *aFilter) {
+    Audio.fun("set_global_filter", [](unsigned int filterId, SoLoud::Filter *aFilter) {
         return soloud->setGlobalFilter(filterId, aFilter);
     });
-    Audio.fun("SetVisualizationEnable", [](bool aEnable) {
+    Audio.fun("set_visualization_enable", [](bool aEnable) {
         return soloud->setVisualizationEnable(aEnable);
     });
-    Audio.fun("CalcFFT", []() {
+    Audio.fun("calc_fft", []() {
         return soloud->calcFFT();
     });
-    Audio.fun("GetWave", []() {
+    Audio.fun("get_wave", []() {
         return soloud->getWave();
     });
-    Audio.fun("GetLoopCount", [](unsigned int voiceHandle) {
+    Audio.fun("get_loop_count", [](unsigned int voiceHandle) {
         return soloud->getLoopCount(voiceHandle);
     });
-    Audio.fun("CreateVoiceGroup", []() {
+    Audio.fun("create_voice_group", []() {
         return soloud->createVoiceGroup();
     });
-    Audio.fun("DestroyVoiceGroup", [](unsigned int voiceGroupHandle) {
+    Audio.fun("destroy_voice_group", [](unsigned int voiceGroupHandle) {
         return soloud->destroyVoiceGroup(voiceGroupHandle);
     });
-    Audio.fun("AddVoiceToGroup", [](unsigned int voiceGroupHandle, unsigned int voiceHandle) {
+    Audio.fun("add_voice_to_group", [](unsigned int voiceGroupHandle, unsigned int voiceHandle) {
         return soloud->addVoiceToGroup(voiceGroupHandle, voiceHandle);
     });
-    Audio.fun("IsVoiceGroup", [](unsigned int voiceGroupHandle) {
+    Audio.fun("is_voice_group", [](unsigned int voiceGroupHandle) {
         return soloud->isVoiceGroup(voiceGroupHandle);
     });
-    Audio.fun("IsVoiceGroupEmpty", [](unsigned int voiceGroupHandle) {
+    Audio.fun("is_voice_group_empty", [](unsigned int voiceGroupHandle) {
         return soloud->isVoiceGroupEmpty(voiceGroupHandle);
     });
-    Audio.fun("Update3dAudio", []() {
+    Audio.fun("update3d_audio", []() {
         return soloud->update3dAudio();
     });
-    Audio.fun("Set3dSoundSpeed", [](float aSpeed) {
+    Audio.fun("set3d_sound_speed", [](float aSpeed) {
         return soloud->set3dSoundSpeed(aSpeed);
     });
-    Audio.fun("Get3dSoundSpeed", []() {
+    Audio.fun("get3d_sound_speed", []() {
         return soloud->get3dSoundSpeed();
     });
-    Audio.fun("Set3dListenerParameters", [](float aPosX, float aPosY, float aPosZ, float aAtX, float aAtY, float aAtZ, float aUpX, float aUpY, float aUpZ) {
+    Audio.fun("set3d_listener_parameters", [](float aPosX, float aPosY, float aPosZ, float aAtX, float aAtY, float aAtZ, float aUpX, float aUpY, float aUpZ) {
         return soloud->set3dListenerParameters(aPosX, aPosY, aPosZ, aAtX, aAtY, aAtZ, aUpX, aUpY, aUpZ);
     });
-    Audio.fun("Set3dListenerPosition", [](float aPosX, float aPosY, float aPosZ) {
+    Audio.fun("set3d_listener_position", [](float aPosX, float aPosY, float aPosZ) {
         return soloud->set3dListenerPosition(aPosX, aPosY, aPosZ);
     });
-    Audio.fun("Set3dListenerAt", [](float aAtX, float aAtY, float aAtZ) {
+    Audio.fun("set3d_listener_at", [](float aAtX, float aAtY, float aAtZ) {
         return soloud->set3dListenerAt(aAtX, aAtY, aAtZ);
     });
-    Audio.fun("Set3dListenerUp", [](float aUpX, float aUpY, float aUpZ) {
+    Audio.fun("set3d_listener_up", [](float aUpX, float aUpY, float aUpZ) {
         return soloud->set3dListenerUp(aUpX, aUpY, aUpZ);
     });
-    Audio.fun("Set3dListenerVelocity", [](float aVelocityX, float aVelocityY, float aVelocityZ) {
+    Audio.fun("set3d_listener_velocity", [](float aVelocityX, float aVelocityY, float aVelocityZ) {
         return soloud->set3dListenerVelocity(aVelocityX, aVelocityY, aVelocityZ);
     });
-    Audio.fun("Set3dSourceParameters", [](unsigned int voiceHandle, float aPosX, float aPosY, float aPosZ) {
+    Audio.fun("set3d_source_parameters", [](unsigned int voiceHandle, float aPosX, float aPosY, float aPosZ) {
         return soloud->set3dSourceParameters(voiceHandle, aPosX, aPosY, aPosZ);
     });
-    Audio.fun("Set3dSourcePosition", [](unsigned int voiceHandle, float aPosX, float aPosY, float aPosZ) {
+    Audio.fun("set3d_source_position", [](unsigned int voiceHandle, float aPosX, float aPosY, float aPosZ) {
         return soloud->set3dSourcePosition(voiceHandle, aPosX, aPosY, aPosZ);
     });
-    Audio.fun("Set3dSourceVelocity", [](unsigned int voiceHandle, float aVelocityX, float aVelocityY, float aVelocityZ) {
+    Audio.fun("set3d_source_velocity", [](unsigned int voiceHandle, float aVelocityX, float aVelocityY, float aVelocityZ) {
         return soloud->set3dSourceVelocity(voiceHandle, aVelocityX, aVelocityY, aVelocityZ);
     });
-    Audio.fun("Set3dSourceMinMaxDistance", [](unsigned int voiceHandle, float aMinDistance, float aMaxDistance) {
+    Audio.fun("set3d_source_min_max_distance", [](unsigned int voiceHandle, float aMinDistance, float aMaxDistance) {
         return soloud->set3dSourceMinMaxDistance(voiceHandle, aMinDistance, aMaxDistance);
     });
-    Audio.fun("Set3dSourceAttenuation", [](unsigned int voiceHandle, unsigned int model, float rolloffFactor) {
+    Audio.fun("set3d_source_attenuation", [](unsigned int voiceHandle, unsigned int model, float rolloffFactor) {
         return soloud->set3dSourceAttenuation(voiceHandle, model, rolloffFactor);
     });
-    Audio.fun("Set3dSourceDopplerFactor", [](unsigned int voiceHandle, float aDopplerFactor) {
+    Audio.fun("set3d_source_doppler_factor", [](unsigned int voiceHandle, float aDopplerFactor) {
         return soloud->set3dSourceDopplerFactor(voiceHandle, aDopplerFactor);
     });
-    Audio.fun("Mix", [](float *aBuffer, unsigned int aSamples) {
+    Audio.fun("mix", [](float *aBuffer, unsigned int aSamples) {
         return soloud->mix(aBuffer, aSamples);
     });
-    Audio.fun("MixSigned16", [](short *aBuffer, unsigned int aSamples) {
+    Audio.fun("mix_signed16", [](short *aBuffer, unsigned int aSamples) {
         return soloud->mixSigned16(aBuffer, aSamples);
     });
-    Audio.cfun("Bus", [](lua_State* L) -> int {
+    Audio.cfun("bus", [](lua_State* L) -> int {
         LuaBinding::State S(L);
         S.alloc<SoLoud::Bus>();
         return 1;
@@ -377,97 +382,97 @@ int luaopen_AudioLib(lua_State *L) {
             .prop_fun("source", [](SoLoud::Wav* self) {
                 return (SoLoud::AudioSource*)self;
             })
-            .prop("mSampleCount", &SoLoud::Wav::mSampleCount)
+            .prop("sample_count", &SoLoud::Wav::mSampleCount)
             .prop_fun("length", &SoLoud::Wav::getLength)
-            .fun("Load", &SoLoud::Wav::load);
+            .fun("load", &SoLoud::Wav::load);
 
     S.addClass<SoLoud::WavStream>("SoundStream")
             .prop_fun("source", [](SoLoud::WavStream* self) {
                 return (SoLoud::AudioSource*)self;
             })
             .prop_fun("length", &SoLoud::WavStream::getLength)
-            .prop("mSampleCount", &SoLoud::WavStream::mSampleCount)
+            .prop("sample_count", &SoLoud::WavStream::mSampleCount)
             .prop("filename", &SoLoud::WavStream::mFilename)
-            .fun("Load", &SoLoud::WavStream::load);
+            .fun("load", &SoLoud::WavStream::load);
 
     S.addClass<SoLoud::Speech>("Speech")
             .prop_fun("source", [](SoLoud::Speech* self) {
                 return (SoLoud::AudioSource*)self;
             })
-            .prop("mBaseFrequency", &SoLoud::Speech::mBaseFrequency)
-            .prop("mBaseSpeed", &SoLoud::Speech::mBaseSpeed)
-            .prop("mBaseDeclination", &SoLoud::Speech::mBaseDeclination)
-            .prop("mBaseWaveform", &SoLoud::Speech::mBaseWaveform)
-            .prop("mFrames", &SoLoud::Speech::mFrames)
-            .fun("SetText", &SoLoud::Speech::setText)
-            .fun("SetParams", &SoLoud::Speech::setParams);
+            .prop("base_frequency", &SoLoud::Speech::mBaseFrequency)
+            .prop("base_speed", &SoLoud::Speech::mBaseSpeed)
+            .prop("base_declination", &SoLoud::Speech::mBaseDeclination)
+            .prop("base_waveform", &SoLoud::Speech::mBaseWaveform)
+            .prop("frames", &SoLoud::Speech::mFrames)
+            .fun("set_text", &SoLoud::Speech::setText)
+            .fun("set_params", &SoLoud::Speech::setParams);
 
     S.addClass<SoLoud::Vizsn>("Speech")
             .prop_fun("source", [](SoLoud::Vizsn* self) {
                 return (SoLoud::AudioSource*)self;
             })
-            .fun("SetText", &SoLoud::Vizsn::setText);
+            .fun("set_text", &SoLoud::Vizsn::setText);
 
     S.addClass<SoLoud::Sfxr>("Sfxr")
             .prop_fun("source", [](SoLoud::Sfxr* self) {
                 return (SoLoud::AudioSource*)self;
             })
-            .fun("LoadPreset", &SoLoud::Sfxr::loadPreset)
-            .fun("LoadParams", &SoLoud::Sfxr::loadParams);
+            .fun("load_preset", &SoLoud::Sfxr::loadPreset)
+            .fun("load_params", &SoLoud::Sfxr::loadParams);
 
     S.addClass<SoLoud::AudioSource>("AudioSource")
             .prop("flags", &SoLoud::AudioSource::mFlags)
-            .prop("baseSamplerate", &SoLoud::AudioSource::mBaseSamplerate)
+            .prop("base_samplerate", &SoLoud::AudioSource::mBaseSamplerate)
             .prop("volume", &SoLoud::AudioSource::mVolume)
             .prop("channels", &SoLoud::AudioSource::mChannels)
-            .prop("audioSourceID", &SoLoud::AudioSource::mAudioSourceID)
-            .prop("minDistance3d", &SoLoud::AudioSource::m3dMinDistance)
-            .prop("maxDistance3d", &SoLoud::AudioSource::m3dMaxDistance)
-            .prop("attenuationRolloff3d", &SoLoud::AudioSource::m3dAttenuationRolloff)
-            .prop("attenuationModel3d", &SoLoud::AudioSource::m3dAttenuationModel)
-            .prop("dopplerFactor3d", &SoLoud::AudioSource::m3dDopplerFactor)
+            .prop("audio_source_iD", &SoLoud::AudioSource::mAudioSourceID)
+            .prop("min_distance3d", &SoLoud::AudioSource::m3dMinDistance)
+            .prop("max_distance3d", &SoLoud::AudioSource::m3dMaxDistance)
+            .prop("attenuation_rolloff3d", &SoLoud::AudioSource::m3dAttenuationRolloff)
+            .prop("attenuation_model3d", &SoLoud::AudioSource::m3dAttenuationModel)
+            .prop("doppler_factor3d", &SoLoud::AudioSource::m3dDopplerFactor)
             .prop("collider", &SoLoud::AudioSource::mCollider)
             .prop("attenuator", &SoLoud::AudioSource::mAttenuator)
-            .prop("colliderData", &SoLoud::AudioSource::mColliderData)
-            .prop("loopPoint", &SoLoud::AudioSource::mLoopPoint)
-            .fun("SetVolume", &SoLoud::AudioSource::setVolume)
-            .fun("SetLooping", &SoLoud::AudioSource::setLooping)
-            .fun("SetSingleInstance", &SoLoud::AudioSource::setSingleInstance)
-            .fun("Set3dMinMaxDistance", &SoLoud::AudioSource::set3dMinMaxDistance)
-            .fun("Set3dAttenuation", &SoLoud::AudioSource::set3dAttenuation)
-            .fun("Set3dDopplerFactor", &SoLoud::AudioSource::set3dDopplerFactor)
-            .fun("Set3dListenerRelative", &SoLoud::AudioSource::set3dListenerRelative)
-            .fun("Set3dDistanceDelay", &SoLoud::AudioSource::set3dDistanceDelay)
-            .fun("Set3dCollider", &SoLoud::AudioSource::set3dCollider)
-            .fun("Set3dAttenuator", &SoLoud::AudioSource::set3dAttenuator)
-            .fun("SetInaudibleBehavior", &SoLoud::AudioSource::setInaudibleBehavior)
-            .fun("SetLoopPoint", &SoLoud::AudioSource::setLoopPoint)
-            .fun("GetLoopPoint", &SoLoud::AudioSource::getLoopPoint)
-            .fun("SetFilter", &SoLoud::AudioSource::setFilter);
+            .prop("collider_data", &SoLoud::AudioSource::mColliderData)
+            .prop("loop_point", &SoLoud::AudioSource::mLoopPoint)
+            .fun("set_volume", &SoLoud::AudioSource::setVolume)
+            .fun("set_looping", &SoLoud::AudioSource::setLooping)
+            .fun("set_single_instance", &SoLoud::AudioSource::setSingleInstance)
+            .fun("set3d_min_max_distance", &SoLoud::AudioSource::set3dMinMaxDistance)
+            .fun("set3d_attenuation", &SoLoud::AudioSource::set3dAttenuation)
+            .fun("set3d_doppler_factor", &SoLoud::AudioSource::set3dDopplerFactor)
+            .fun("set3d_listener_relative", &SoLoud::AudioSource::set3dListenerRelative)
+            .fun("set3d_distance_delay", &SoLoud::AudioSource::set3dDistanceDelay)
+            .fun("set3d_collider", &SoLoud::AudioSource::set3dCollider)
+            .fun("set3d_attenuator", &SoLoud::AudioSource::set3dAttenuator)
+            .fun("set_inaudible_behavior", &SoLoud::AudioSource::setInaudibleBehavior)
+            .fun("set_loop_point", &SoLoud::AudioSource::setLoopPoint)
+            .fun("get_loop_point", &SoLoud::AudioSource::getLoopPoint)
+            .fun("set_filter", &SoLoud::AudioSource::setFilter);
 
     S.addClass<SoLoud::Bus>("Bus")
             .ctor<>()
-            .fun("Source", [](SoLoud::Bus* self) {
+            .fun("source", [](SoLoud::Bus* self) {
                 return (SoLoud::AudioSource*)self;
             })
-            .fun("Play", [](SoLoud::Bus* self, SoLoud::AudioSource* source) {
+            .fun("play", [](SoLoud::Bus* self, SoLoud::AudioSource* source) {
                 return self->play(*source);
             })
-            .fun("PlayClocked", [](SoLoud::Bus* self, double aSoundTime, SoLoud::AudioSource* source) {
+            .fun("play_clocked", [](SoLoud::Bus* self, double aSoundTime, SoLoud::AudioSource* source) {
                 return self->playClocked(aSoundTime, *source);
             })
-            .fun("Play3d", [](SoLoud::Bus* self, SoLoud::AudioSource* source, float x, float y, float z) {
+            .fun("play3d", [](SoLoud::Bus* self, SoLoud::AudioSource* source, float x, float y, float z) {
                 return self->play3d(*source, x, y, z);
             })
-            .fun("Play3dClocked", [](SoLoud::Bus* self, double aSoundTime, SoLoud::AudioSource* source, float x, float y, float z) {
+            .fun("play3d_clocked", [](SoLoud::Bus* self, double aSoundTime, SoLoud::AudioSource* source, float x, float y, float z) {
                 return self->play3dClocked(aSoundTime, *source, x, y, z);
             })
-            .fun("SetChannels" , &SoLoud::Bus::setChannels)
-            .fun("SetVisualizationEnable", &SoLoud::Bus::setVisualizationEnable)
-            .fun("CalcFFT", &SoLoud::Bus::calcFFT)
-            .fun("GetWave", &SoLoud::Bus::getWave)
-            .fun("GetApproximateVolume", &SoLoud::Bus::getApproximateVolume)
-            .fun("GetActiveVoiceCount", &SoLoud::Bus::getActiveVoiceCount);
+            .fun("setChannels" , &SoLoud::Bus::setChannels)
+            .fun("set_visualization_enable", &SoLoud::Bus::setVisualizationEnable)
+            .fun("calc_fft", &SoLoud::Bus::calcFFT)
+            .fun("get_wave", &SoLoud::Bus::getWave)
+            .fun("get_approximate_volume", &SoLoud::Bus::getApproximateVolume)
+            .fun("get_active_voice_count", &SoLoud::Bus::getActiveVoiceCount);
 
     return 1;
 }
