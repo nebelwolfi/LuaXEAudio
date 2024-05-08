@@ -24,53 +24,93 @@ int lua_Audio_Shutdown(lua_State *L) {
     return 0;
 }
 
+#define src_prop_fun(name) \
+    [](lua_State *L) -> int { \
+        auto self = *(SoLoud::AudioSource**) lua_touserdata(L, 1); \
+        lua_pushnumber(L, self->name); \
+        return 1; \
+    }, [](lua_State *L) -> int { \
+        auto self = *(SoLoud::AudioSource**) lua_touserdata(L, 1); \
+        self->name = lua_tonumber(L, 3); \
+        return 0; \
+    }
+
 void push_source_funcs(auto c) {
-    c.prop("flags", &SoLoud::AudioSource::mFlags)
-    .prop("baseSamplerate", &SoLoud::AudioSource::mBaseSamplerate)
-    .prop("volume", &SoLoud::AudioSource::mVolume)
-    .prop("channels", &SoLoud::AudioSource::mChannels)
-    .prop("audioSourceID", &SoLoud::AudioSource::mAudioSourceID)
-    .prop("minDistance3d", &SoLoud::AudioSource::m3dMinDistance)
-    .prop("maxDistance3d", &SoLoud::AudioSource::m3dMaxDistance)
-    .prop("attenuationRolloff3d", &SoLoud::AudioSource::m3dAttenuationRolloff)
-    .prop("attenuationModel3d", &SoLoud::AudioSource::m3dAttenuationModel)
-    .prop("dopplerFactor3d", &SoLoud::AudioSource::m3dDopplerFactor)
-    .prop("collider", &SoLoud::AudioSource::mCollider)
-    .prop("attenuator", &SoLoud::AudioSource::mAttenuator)
-    .prop("colliderData", &SoLoud::AudioSource::mColliderData)
-    .prop("loopPoint", &SoLoud::AudioSource::mLoopPoint)
-    .fun("set_inaudible_behavior", &SoLoud::AudioSource::setInaudibleBehavior)
-    .fun("set_filter", &SoLoud::AudioSource::setFilter);
-    c.fun("play", [](decltype(c)::value_type* self) {
-        return AudioVoiceHandle(soloud->play(*self));
+    c.prop("flags", src_prop_fun(mFlags))
+    .prop("baseSamplerate", src_prop_fun(mBaseSamplerate))
+    .prop("volume", src_prop_fun(mVolume))
+    .prop("channels", src_prop_fun(mChannels))
+    .prop("audioSourceID", src_prop_fun(mAudioSourceID))
+    .prop("minDistance3d", src_prop_fun(m3dMinDistance))
+    .prop("maxDistance3d", src_prop_fun(m3dMaxDistance))
+    .prop("attenuationRolloff3d", src_prop_fun(m3dAttenuationRolloff))
+    .prop("attenuationModel3d", src_prop_fun(m3dAttenuationModel))
+    .prop("dopplerFactor3d", src_prop_fun(m3dDopplerFactor))
+    .prop("colliderData", src_prop_fun(mColliderData))
+    .prop("loopPoint", src_prop_fun(mLoopPoint))
+    //.fun("set_inaudible_behavior", src_prop_fun(setInaudibleBehavior))
+    //.fun("set_filter", src_prop_fun(setFilter))
+    ;
+    c.fun("play", [](lua_State *L) -> int {
+        auto self = *(SoLoud::AudioSource**) lua_touserdata(L, 1);
+        new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->play(*self));
+        return 1;
     });
-    c.fun("play_clocked", [](decltype(c)::value_type* self, double aSoundTime) {
-        return AudioVoiceHandle(soloud->playClocked(aSoundTime, *self));
+    c.fun("play_clocked", [](lua_State *L) -> int {
+        auto self = *(SoLoud::AudioSource**) lua_touserdata(L, 1);
+        new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->playClocked(lua_tonumber(L, 2), *self));
+        return 1;
     });
-    c.fun("play3d", [](decltype(c)::value_type* self, float x, float y, float z) {
-        return AudioVoiceHandle(soloud->play3d(*self, x, y, z));
+    c.fun("play3d", [](lua_State *L) -> int {
+        auto self = *(SoLoud::AudioSource**) lua_touserdata(L, 1);
+        new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->play3d(*self, lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4)));
+        return 1;
     });
-    c.fun("play3d_clocked", [](decltype(c)::value_type* self, double aSoundTime, float x, float y, float z) {
-        return AudioVoiceHandle(soloud->play3dClocked(aSoundTime, *self, x, y, z));
+    c.fun("play3d_clocked", [](lua_State *L) -> int {
+        auto self = *(SoLoud::AudioSource**) lua_touserdata(L, 1);
+        new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->play3dClocked(lua_tonumber(L, 2), *self, lua_tonumber(L, 3), lua_tonumber(L, 4), lua_tonumber(L, 5)));
+        return 1;
     });
-    c.fun("play_background", [](decltype(c)::value_type* self) {
-        return AudioVoiceHandle(soloud->playBackground(*self));
+    c.fun("play_background", [](lua_State *L) -> int {
+        auto self = *(SoLoud::AudioSource**) lua_touserdata(L, 1);
+        new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->playBackground(*self));
+        return 1;
     });
-    c.fun("stop", [](decltype(c)::value_type* self) {
+    c.fun("stop", [](lua_State *L) -> int {
+        auto self = *(SoLoud::AudioSource**) lua_touserdata(L, 1);
         soloud->stopAudioSource(*self);
+        return 0;
     });
-    c.fun("count", [](decltype(c)::value_type* self) {
-        return soloud->countAudioSource(*self);
+    c.fun("count", [](lua_State *L) -> int {
+        auto self = *(SoLoud::AudioSource**) lua_touserdata(L, 1);
+        lua_pushinteger(L, soloud->countAudioSource(*self));
+        return 1;
     });
 }
+
+#define prop_fun(type, name, push, to) \
+    [](lua_State *L) -> int { \
+        auto self = *(type**) lua_touserdata(L, 1); \
+        push(L, self->name); \
+        return 1; \
+    }, [](lua_State *L) -> int { \
+        auto self = *(type**) lua_touserdata(L, 1); \
+        self->name = to(L, 3); \
+        return 0; \
+    }
+
+#define prop_fun2(type, name, push) \
+    [](lua_State *L) -> int { \
+        auto self = *(type**) lua_touserdata(L, 1); \
+        push(L, self->name); \
+        return 1; \
+    }
 
 int luaopen_AudioLib(lua_State *L) {
     if (!soloud) {
         soloud = new SoLoud::Soloud();
         soloud->init(SoLoud::Soloud::CLIP_ROUNDOFF, SoLoud::Soloud::AUTO, SoLoud::Soloud::AUTO, SoLoud::Soloud::AUTO, MAX_CHANNELS);
     }
-
-    auto S = LuaBinding::State(L);
 
     lua_newuserdata(L, 0);
     lua_newtable(L);
@@ -81,17 +121,16 @@ int luaopen_AudioLib(lua_State *L) {
 
     lua_newtable(L);
     lua_pushcfunction(L, +[](lua_State *L) {
-        LuaBinding::State S(L);
         lua_newtable(L);
-        auto sound = S.alloc<SoLoud::Wav>();
+        auto sound = new (lua::alloc<SoLoud::Wav>(L)) SoLoud::Wav();
         lua_setfield(L, -2, "source");
-        sound->load((AudioBasePath + lua_tostring(L, 1)).c_str());
+        sound->load((AudioBasePath + luaL_checkstring(L, 1)).c_str());
         auto n = lua_gettop(L);
         if (n > 3)
             sound->setLooping(lua_toboolean(L, 3));
         if (n > 2)
             sound->setVolume(lua_tonumber(L, 2));
-        S.push(AudioVoiceHandle(soloud->play(*sound)));
+        new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->play(*sound));
         lua_setfield(L, -2, "handle");
         return 1;
     });
@@ -157,44 +196,42 @@ int luaopen_AudioLib(lua_State *L) {
     }, 0);
     lua_setfield(L, -2, "set3d_listener_velocity");
     lua_pushcfunction(L, +[](lua_State *L) {
-        LuaBinding::State S(L);
-        S.alloc<SoLoud::Wav>()->load((AudioBasePath + lua_tostring(L, 1)).c_str());
+        (new (lua::alloc<SoLoud::Wav>(L)) SoLoud::Wav())->load((AudioBasePath + lua_tostring(L, 1)).c_str());
         return 1;
     });
     lua_setfield(L, -2, "make_sound");
     lua_pushcfunction(L, +[](lua_State *L) {
-        LuaBinding::State S(L);
-        S.alloc<SoLoud::WavStream>()->load((AudioBasePath + lua_tostring(L, 1)).c_str());
+        (new (lua::alloc<SoLoud::Wav>(L)) SoLoud::Wav())->load((AudioBasePath + lua_tostring(L, 1)).c_str());
         return 1;
     });
     lua_setfield(L, -2, "make_stream");
     lua_pushcfunction(L, +[](lua_State *L) {
-        LuaBinding::State S(L);
-        S.alloc<SoLoud::Speech>();
+        //S.alloc<SoLoud::Speech>();
+        new (lua::alloc<SoLoud::Speech>(L)) SoLoud::Speech();
         return 1;
     });
     lua_setfield(L, -2, "make_speech");
     lua_pushcfunction(L, +[](lua_State *L) {
-        LuaBinding::State S(L);
-        S.alloc<SoLoud::Vizsn>();
+        //S.alloc<SoLoud::Vizsn>();
+        new (lua::alloc<SoLoud::Vizsn>(L)) SoLoud::Vizsn();
         return 1;
     });
     lua_setfield(L, -2, "make_vizsn");
     lua_pushcfunction(L, +[](lua_State *L) {
-        LuaBinding::State S(L);
-        S.alloc<SoLoud::Sfxr>();
+        //S.alloc<SoLoud::Sfxr>();
+        new (lua::alloc<SoLoud::Sfxr>(L)) SoLoud::Sfxr();
         return 1;
     });
     lua_setfield(L, -2, "make_sfxr");
     lua_pushcfunction(L, +[](lua_State *L) {
-        LuaBinding::State S(L);
-        S.alloc<SoLoud::Bus>();
+        //S.alloc<SoLoud::Bus>();
+        new (lua::alloc<SoLoud::Bus>(L)) SoLoud::Bus();
         return 1;
     });
     lua_setfield(L, -2, "make_bus");
     lua_pushcfunction(L, +[](lua_State *L) {
-        LuaBinding::State S(L);
-        S.push(AudioVoiceHandle(soloud->createVoiceGroup()));
+        //S.push(AudioVoiceHandle(soloud->createVoiceGroup()));
+        new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->createVoiceGroup());
         return 1;
     });
     lua_setfield(L, -2, "make_voice_group");
@@ -270,189 +307,359 @@ int luaopen_AudioLib(lua_State *L) {
     lua_setfield(L, -2, "__newindex");
     lua_setmetatable(L, -2);
 
-    push_source_funcs(S.addClass<SoLoud::Wav>("Sound")
-            .prop("sampleCount", &SoLoud::Wav::mSampleCount)
-            .prop_fun("length", &SoLoud::Wav::getLength)
-            .fun("load", &SoLoud::Wav::load));
+    push_source_funcs(lua::bind::add<SoLoud::Wav>(L, "Sound")
+            .prop("sampleCount", prop_fun(SoLoud::Wav, mSampleCount, lua_pushinteger, lua_tointeger))
+            .prop("length", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Wav**) lua_touserdata(L, 1);
+                lua_pushnumber(L, self->getLength());
+                return 1;
+            })
+            .fun("load", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Wav**) lua_touserdata(L, 1);
+                self->load(luaL_checkstring(L, 2));
+                return 0;
+            })
+            );
 
-    push_source_funcs(S.addClass<SoLoud::WavStream>("SoundStream")
-            .prop_fun("length", &SoLoud::WavStream::getLength)
-            .prop("sampleCount", &SoLoud::WavStream::mSampleCount)
-            .prop("filename", &SoLoud::WavStream::mFilename));
+    push_source_funcs(lua::bind::add<SoLoud::WavStream>(L, "SoundStream")
+            .prop("length", [](lua_State *L) -> int {
+                auto self = *(SoLoud::WavStream**) lua_touserdata(L, 1);
+                lua_pushnumber(L, self->getLength());
+                return 1;
+            })
+            .prop("sampleCount", prop_fun(SoLoud::WavStream, mSampleCount, lua_pushinteger, lua_tointeger))
+            .prop("filename", prop_fun2(SoLoud::WavStream, mFilename, lua_pushstring))
+        );
 
-    push_source_funcs(S.addClass<SoLoud::Speech>("Speech")
-            .prop("baseFrequency", &SoLoud::Speech::mBaseFrequency)
-            .prop("baseSpeed", &SoLoud::Speech::mBaseSpeed)
-            .prop("baseDeclination", &SoLoud::Speech::mBaseDeclination)
-            .prop("baseWaveform", &SoLoud::Speech::mBaseWaveform)
-            .prop("frames", &SoLoud::Speech::mFrames)
-            .fun("set_text", &SoLoud::Speech::setText)
-            .fun("set_params", &SoLoud::Speech::setParams));
+    push_source_funcs(lua::bind::add<SoLoud::Speech>(L, "Speech")
+            .prop("baseFrequency", prop_fun(SoLoud::Speech, mBaseFrequency, lua_pushnumber, lua_tonumber))
+            .prop("baseSpeed", prop_fun(SoLoud::Speech, mBaseSpeed, lua_pushnumber, lua_tonumber))
+            .prop("baseDeclination", prop_fun(SoLoud::Speech, mBaseDeclination, lua_pushnumber, lua_tonumber))
+            .prop("baseWaveform", prop_fun(SoLoud::Speech, mBaseWaveform, lua_pushnumber, lua_tonumber))
+            .prop("frames", prop_fun(SoLoud::Speech, mFrames, lua_pushnumber, lua_tonumber))
+            .fun("set_text", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Speech**) lua_touserdata(L, 1);
+                self->setText(luaL_checkstring(L, 2));
+                return 0;
+            })
+            .fun("set_params", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Speech**) lua_touserdata(L, 1);
+                self->setParams(luaL_checkinteger(L, 2), luaL_checknumber(L, 3), luaL_checknumber(L, 4), luaL_checkinteger(L, 5));
+                return 0;
+            })
+        );
 
-    push_source_funcs(S.addClass<SoLoud::Vizsn>("Speech")
-            .fun("set_text", &SoLoud::Vizsn::setText));
+    push_source_funcs(lua::bind::add<SoLoud::Vizsn>(L, "Speech")
+            .fun("set_text", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Vizsn**) lua_touserdata(L, 1);
+                self->setText((char*)luaL_checkstring(L, 2));
+                return 0;
+            })
+            );
 
-    push_source_funcs(S.addClass<SoLoud::Sfxr>("Sfxr")
-            .cfun("load_preset", [](SoLoud::Sfxr* self, lua_State *L) {
+    push_source_funcs(lua::bind::add<SoLoud::Sfxr>(L, "Sfxr")
+            .fun("load_preset", [](lua_State *L) {
+                auto self = *(SoLoud::Sfxr**) lua_touserdata(L, 1);
                 if (lua_gettop(L) < 2)
                     self->loadPreset(lua_tointeger(L, 2), GetTickCount64());
                 else
                     self->loadPreset(lua_tointeger(L, 2), lua_tointeger(L, 3));
                 return 0;
             })
-            .fun("load_params", &SoLoud::Sfxr::loadParams));
+            .fun("load_params", [](lua_State *L) {
+                auto self = *(SoLoud::Sfxr**) lua_touserdata(L, 1);
+                self->loadParams(luaL_checkstring(L, 2));
+                return 0;
+            })
+        );
 
-    push_source_funcs(S.addClass<SoLoud::Bus>("Bus")
-            .fun("play", [](SoLoud::Bus* self, SoLoud::AudioSource* source) {
-                return self->play(*source);
+    push_source_funcs(lua::bind::add<SoLoud::Bus>(L, "Bus")
+            .fun("play", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->play(*self));
+                return 1;
             })
-            .fun("play_clocked", [](SoLoud::Bus* self, double aSoundTime, SoLoud::AudioSource* source) {
-                return self->playClocked(aSoundTime, *source);
+            .fun("play_clocked", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->playClocked(lua_tonumber(L, 2), *self));
+                return 1;
             })
-            .fun("play3d", [](SoLoud::Bus* self, SoLoud::AudioSource* source, float x, float y, float z) {
-                return self->play3d(*source, x, y, z);
+            .fun("play3d", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->play3d(*self, lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4)));
+                return 1;
             })
-            .fun("play3d_clocked", [](SoLoud::Bus* self, double aSoundTime, SoLoud::AudioSource* source, float x, float y, float z) {
-                return self->play3dClocked(aSoundTime, *source, x, y, z);
+            .fun("play3d_clocked", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                new (lua::alloc<AudioVoiceHandle>(L)) AudioVoiceHandle(soloud->play3dClocked(lua_tonumber(L, 2), *self, lua_tonumber(L, 3), lua_tonumber(L, 4), lua_tonumber(L, 5)));
+                return 1;
             })
-            .fun("set_channels" , &SoLoud::Bus::setChannels)
-            .fun("set_visualization_enable", &SoLoud::Bus::setVisualizationEnable)
-            .fun("calc_fft", &SoLoud::Bus::calcFFT)
-            .fun("get_wave", &SoLoud::Bus::getWave)
-            .fun("get_approximate_volume", &SoLoud::Bus::getApproximateVolume)
-            .fun("get_active_voice_count", &SoLoud::Bus::getActiveVoiceCount));
+            .fun("set_channels", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                self->setChannels(lua_tointeger(L, 2));
+                return 0;
+            })
+            .fun("set_visualization_enable", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                self->setVisualizationEnable(lua_toboolean(L, 2));
+                return 0;
+            })
+            .fun("calc_fft", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                auto fft = self->calcFFT();
+                lua_newtable(L);
+                for (int i = 0; i < 256; i++) {
+                    lua_pushnumber(L, fft[i]);
+                    lua_rawseti(L, -2, i + 1);
+                }
+                return 1;
+            })
+            .fun("get_wave", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                auto wave = self->getWave();
+                lua_newtable(L);
+                for (int i = 0; i < 256; i++) {
+                    lua_pushnumber(L, wave[i]);
+                    lua_rawseti(L, -2, i + 1);
+                }
+                return 1;
+            })
+            .fun("get_approximate_volume", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                lua_pushnumber(L, self->getApproximateVolume(lua_tointeger(L, 2)));
+                return 1;
+            })
+            .fun("get_active_voice_count", [](lua_State *L) -> int {
+                auto self = *(SoLoud::Bus**) lua_touserdata(L, 1);
+                lua_pushinteger(L, self->getActiveVoiceCount());
+                return 1;
+            })
+        );
 
-    S.addClass<AudioVoiceHandle>("VoiceHandle")
-            .fun("stop", [](AudioVoiceHandle* self) {
+    lua::bind::add<AudioVoiceHandle>(L, "VoiceHandle")
+            .fun("stop", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
                 soloud->stop(self->handle);
+                return 0;
             })
-            .fun("seek", [](AudioVoiceHandle* self, double aSeconds) {
-                soloud->seek(self->handle, aSeconds);
+            .fun("seek", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->seek(self->handle, lua_tonumber(L, 2));
+                return 0;
             })
-            .fun("set_filter_parameter", [](AudioVoiceHandle* vh, unsigned int filterId, unsigned int attributeId, float value) {
-                return soloud->setFilterParameter(vh->handle, filterId, attributeId, value);
+            .fun("set_filter_parameter", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setFilterParameter(self->handle, lua_tointeger(L, 2), lua_tointeger(L, 3), lua_tonumber(L, 4));
+                return 0;
             })
-            .fun("get_filter_parameter", [](AudioVoiceHandle* vh, unsigned int filterId, unsigned int attributeId) {
-                return soloud->getFilterParameter(vh->handle, filterId, attributeId);
+            .fun("get_filter_parameter", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushnumber(L, soloud->getFilterParameter(self->handle, lua_tointeger(L, 2), lua_tointeger(L, 3)));
+                return 1;
             })
-            .fun("fade_filter_parameter", [](AudioVoiceHandle* vh, unsigned int filterId, unsigned int attributeId, float to, double aTime) {
-                return soloud->fadeFilterParameter(vh->handle, filterId, attributeId, to, aTime);
+            .fun("fade_filter_parameter", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->fadeFilterParameter(self->handle, lua_tointeger(L, 2), lua_tointeger(L, 3), lua_tonumber(L, 4), lua_tonumber(L, 5));
+                return 0;
             })
-            .fun("oscillate_filter_parameter", [](AudioVoiceHandle* vh, unsigned int filterId, unsigned int attributeId, float from, float to, double aTime) {
-                return soloud->oscillateFilterParameter(vh->handle, filterId, attributeId, from, to, aTime);
+            .fun("oscillate_filter_parameter", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->oscillateFilterParameter(self->handle, lua_tointeger(L, 2), lua_tointeger(L, 3), lua_tonumber(L, 4), lua_tonumber(L, 5), lua_tonumber(L, 6));
+                return 0;
             })
-            .prop_fun("stream_time", [](AudioVoiceHandle* vh) {
-                return soloud->getStreamTime(vh->handle);
+            .prop("stream_time", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushnumber(L, soloud->getStreamTime(self->handle));
+                return 1;
             })
-            .prop_fun("pause", [](AudioVoiceHandle* vh) {
-                return soloud->getPause(vh->handle);
-            }, [](AudioVoiceHandle* vh, bool aPause) {
-                soloud->setPause(vh->handle, aPause);
+            .prop("pause", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushboolean(L, soloud->getPause(self->handle));
+                return 1;
+            }, [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setPause(self->handle, lua_toboolean(L, 3));
+                return 0;
             })
-            .prop_fun("volume", [](AudioVoiceHandle* vh) {
-                return soloud->getVolume(vh->handle);
-            }, [](AudioVoiceHandle* vh, float aVolume) {
-                soloud->setVolume(vh->handle, aVolume);
+            .prop("volume", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushnumber(L, soloud->getVolume(self->handle));
+                return 1;
+            }, [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setVolume(self->handle, lua_tonumber(L, 3));
+                return 0;
             })
-            .prop_fun("overall_volume", [](AudioVoiceHandle* vh) {
-                return soloud->getOverallVolume(vh->handle);
+            .prop("overall_volume", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushnumber(L, soloud->getOverallVolume(self->handle));
+                return 1;
             })
-            .prop_fun("pan", [](AudioVoiceHandle* vh) {
-                return soloud->getPan(vh->handle);
-            }, [](AudioVoiceHandle* vh, float aPan) {
-                soloud->setPan(vh->handle, aPan);
+            .prop("pan", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushnumber(L, soloud->getPan(self->handle));
+                return 1;
+            }, [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setPan(self->handle, lua_tonumber(L, 3));
+                return 0;
             })
-            .prop_fun("samplerate", [](AudioVoiceHandle* vh) {
-                return soloud->getSamplerate(vh->handle);
-            }, [](AudioVoiceHandle* vh, float aSamplerate) {
-                soloud->setSamplerate(vh->handle, aSamplerate);
+            .prop("samplerate", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushnumber(L, soloud->getSamplerate(self->handle));
+                return 1;
+            }, [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setSamplerate(self->handle, lua_tonumber(L, 3));
+                return 0;
             })
-            .prop_fun("protect_voice", [](AudioVoiceHandle* vh) {
-                return soloud->getProtectVoice(vh->handle);
-            }, [](AudioVoiceHandle* vh, bool aProtect) {
-                soloud->setProtectVoice(vh->handle, aProtect);
+            .prop("protect_voice", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushboolean(L, soloud->getProtectVoice(self->handle));
+                return 1;
+            }, [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setProtectVoice(self->handle, lua_toboolean(L, 3));
+                return 0;
             })
-            .prop_fun("relative_play_speed", [](AudioVoiceHandle* vh) {
-                return soloud->getRelativePlaySpeed(vh->handle);
-            }, [](AudioVoiceHandle* vh, float aSpeed) {
-                soloud->setRelativePlaySpeed(vh->handle, aSpeed);
+            .prop("relative_play_speed", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushnumber(L, soloud->getRelativePlaySpeed(self->handle));
+                return 1;
+            }, [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setRelativePlaySpeed(self->handle, lua_tonumber(L, 3));
+                return 0;
             })
-            .prop_fun("valid", [](AudioVoiceHandle* vh) {
-                return soloud->isValidVoiceHandle(vh->handle);
+            .prop("valid", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushboolean(L, soloud->isValidVoiceHandle(self->handle));
+                return 1;
             })
-            .prop_fun("looping", [](AudioVoiceHandle* vh) {
-                return soloud->getLooping(vh->handle);
-            }, [](AudioVoiceHandle* vh, bool aLooping) {
-                soloud->setLooping(vh->handle, aLooping);
+            .prop("looping", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushboolean(L, soloud->getLooping(self->handle));
+                return 1;
+            }, [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setLooping(self->handle, lua_toboolean(L, 3));
+                return 0;
             })
-            .prop_fun("loop_point", [](AudioVoiceHandle* vh) {
-                return soloud->getLoopPoint(vh->handle);
-            }, [](AudioVoiceHandle* vh, double aLoopPoint) {
-                return soloud->setLoopPoint(vh->handle, aLoopPoint);
+            .prop("loop_point", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushnumber(L, soloud->getLoopPoint(self->handle));
+                return 1;
+            }, [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setLoopPoint(self->handle, lua_tonumber(L, 3));
+                return 0;
             })
-            .fun("set_inaudible_behavior", [](AudioVoiceHandle* vh, bool aMustTick, bool aKill) {
-                return soloud->setInaudibleBehavior(vh->handle, aMustTick, aKill);
+            .fun("set_inaudible_behavior", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setInaudibleBehavior(self->handle, lua_toboolean(L, 2), lua_toboolean(L, 3));
+                return 0;
             })
-            .fun("set3d_source_parameters", [](AudioVoiceHandle* vh, float aPosX, float aPosY, float aPosZ) {
-                return soloud->set3dSourceParameters(vh->handle, aPosX, aPosY, aPosZ);
+            .fun("set3d_source_parameters", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->set3dSourceParameters(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4));
+                return 0;
             })
-            .fun("set3d_source_position", [](AudioVoiceHandle* vh, float aPosX, float aPosY, float aPosZ) {
-                return soloud->set3dSourcePosition(vh->handle, aPosX, aPosY, aPosZ);
+            .fun("set3d_source_position", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->set3dSourcePosition(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4));
+                return 0;
             })
-            .fun("set3d_source_velocity", [](AudioVoiceHandle* vh, float aVelocityX, float aVelocityY, float aVelocityZ) {
-                return soloud->set3dSourceVelocity(vh->handle, aVelocityX, aVelocityY, aVelocityZ);
+            .fun("set3d_source_velocity", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->set3dSourceVelocity(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4));
+                return 0;
             })
-            .fun("set3d_source_min_max_distance", [](AudioVoiceHandle* vh, float aMinDistance, float aMaxDistance) {
-                return soloud->set3dSourceMinMaxDistance(vh->handle, aMinDistance, aMaxDistance);
+            .fun("set3d_source_min_max_distance", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->set3dSourceMinMaxDistance(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3));
+                return 0;
             })
-            .fun("set3d_source_attenuation", [](AudioVoiceHandle* vh, unsigned int model, float rolloffFactor) {
-                return soloud->set3dSourceAttenuation(vh->handle, model, rolloffFactor);
+            .fun("set3d_source_attenuation", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->set3dSourceAttenuation(self->handle, lua_tointeger(L, 2), lua_tonumber(L, 3));
+                return 0;
             })
-            .fun("set3d_source_doppler_factor", [](AudioVoiceHandle* vh, float aDopplerFactor) {
-                return soloud->set3dSourceDopplerFactor(vh->handle, aDopplerFactor);
+            .fun("set3d_source_doppler_factor", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->set3dSourceDopplerFactor(self->handle, lua_tonumber(L, 2));
+                return 0;
             })
-            .fun("set_relative_play_speed", [](AudioVoiceHandle* vh, float aSpeed) {
-                return soloud->setRelativePlaySpeed(vh->handle, aSpeed);
+            .fun("set_relative_play_speed", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setRelativePlaySpeed(self->handle, lua_tonumber(L, 2));
+                return 0;
             })
-            .fun("set_protect_voice", [](AudioVoiceHandle* vh, bool aProtect) {
-                return soloud->setProtectVoice(vh->handle, aProtect);
+            .fun("set_protect_voice", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setProtectVoice(self->handle, lua_toboolean(L, 2));
+                return 0;
             })
-            .fun("set_pan_absolute", [](AudioVoiceHandle* vh, float aLVolume, float aRVolume, float aLBVolume, float aRBVolume, float aCVolume, float aSVolume) {
-                return soloud->setPanAbsolute(vh->handle, aLVolume, aRVolume, aLBVolume, aRBVolume, aCVolume, aSVolume);
+            .fun("set_pan_absolute", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setPanAbsolute(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4), lua_tonumber(L, 5), lua_tonumber(L, 6), lua_tonumber(L, 7));
+                return 0;
             })
-            .fun("set_delay_samples", [](AudioVoiceHandle* vh, unsigned int aSamples) {
-                return soloud->setDelaySamples(vh->handle, aSamples);
+            .fun("set_delay_samples", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->setDelaySamples(self->handle, lua_tointeger(L, 2));
+                return 0;
             })
-            .fun("fade_volume", [](AudioVoiceHandle* vh, float aTo, double aTime) {
-                return soloud->fadeVolume(vh->handle, aTo, aTime);
+            .fun("fade_volume", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->fadeVolume(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3));
+                return 0;
             })
-            .fun("fade_pan", [](AudioVoiceHandle* vh, float aTo, double aTime) {
-                return soloud->fadePan(vh->handle, aTo, aTime);
+            .fun("fade_pan", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->fadePan(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3));
+                return 0;
             })
-            .fun("fade_relative_play_speed", [](AudioVoiceHandle* vh, float aTo, double aTime) {
-                return soloud->fadeRelativePlaySpeed(vh->handle, aTo, aTime);
+            .fun("fade_relative_play_speed", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->fadeRelativePlaySpeed(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3));
+                return 0;
             })
-            .fun("fade_global_volume", [](float aTo, double aTime) {
-                return soloud->fadeGlobalVolume(aTo, aTime);
+            .fun("fade_global_volume", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->fadeGlobalVolume(lua_tonumber(L, 2), lua_tonumber(L, 3));
+                return 0;
             })
-            .fun("schedule_pause", [](AudioVoiceHandle* vh, double aTime) {
-                return soloud->schedulePause(vh->handle, aTime);
+            .fun("schedule_pause", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->schedulePause(self->handle, lua_tonumber(L, 2));
+                return 0;
             })
-            .fun("schedule_stop", [](AudioVoiceHandle* vh, double aTime) {
-                return soloud->scheduleStop(vh->handle, aTime);
+            .fun("schedule_stop", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->scheduleStop(self->handle, lua_tonumber(L, 2));
+                return 0;
             })
-            .fun("oscillate_volume", [](AudioVoiceHandle* vh, float aFrom, float aTo, double aTime) {
-                return soloud->oscillateVolume(vh->handle, aFrom, aTo, aTime);
+            .fun("oscillate_volume", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->oscillateVolume(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4));
+                return 0;
             })
-            .fun("oscillate_pan", [](AudioVoiceHandle* vh, float aFrom, float aTo, double aTime) {
-                return soloud->oscillatePan(vh->handle, aFrom, aTo, aTime);
+            .fun("oscillate_pan", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->oscillatePan(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4));
+                return 0;
             })
-            .fun("oscillate_relative_play_speed", [](AudioVoiceHandle* vh, float aFrom, float aTo, double aTime) {
-                return soloud->oscillateRelativePlaySpeed(vh->handle, aFrom, aTo, aTime);
+            .fun("oscillate_relative_play_speed", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                soloud->oscillateRelativePlaySpeed(self->handle, lua_tonumber(L, 2), lua_tonumber(L, 3), lua_tonumber(L, 4));
+                return 0;
             })
-            .prop_fun("loop_count", [](AudioVoiceHandle* vh) {
-                return soloud->getLoopCount(vh->handle);
-            });
+            .prop("loop_count", [](lua_State *L) -> int {
+                auto self = lua::check<AudioVoiceHandle>(L, 1);
+                lua_pushinteger(L, soloud->getLoopCount(self->handle));
+                return 1;
+            })
+        ;
 
     return 1;
 }

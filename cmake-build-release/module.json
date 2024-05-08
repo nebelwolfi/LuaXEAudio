@@ -1,7 +1,0 @@
-{
-    "name": "audio",
-    "type": "dll",
-    "files": [
-        "audio.dll"
-    ]
-}
