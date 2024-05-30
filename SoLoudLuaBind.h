@@ -8,6 +8,7 @@
 #include "soloud_openmpt.h"
 #include "soloud_c.h"
 #include "soloud_vizsn.h"
+#include <shared/env.h>
 
 struct AudioVoiceHandle {
     SoLoud::handle handle;
@@ -111,13 +112,8 @@ int luaopen_AudioLib(lua_State *L) {
         soloud = new SoLoud::Soloud();
         soloud->init(SoLoud::Soloud::CLIP_ROUNDOFF, SoLoud::Soloud::AUTO, SoLoud::Soloud::AUTO, SoLoud::Soloud::AUTO, MAX_CHANNELS);
     }
-
-    lua_newuserdata(L, 0);
-    lua_newtable(L);
-    lua_pushcclosure(L, lua_Audio_Shutdown, 0);
-    lua_setfield(L, -2, "__gc");
-    lua_setmetatable(L, -2);
-    luaL_ref(L, LUA_REGISTRYINDEX);
+    lua::env::init(L);
+    lua::env::on_close(lua_Audio_Shutdown);
 
     lua_newtable(L);
     lua_pushcfunction(L, +[](lua_State *L) {
